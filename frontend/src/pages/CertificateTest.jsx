@@ -1,4 +1,5 @@
 import React from 'react'
+import { Link } from 'react-router-dom'
 import CertificateInfo from '../components/events/CertificateInfo'
 import CertificateBadge from '../components/events/CertificateBadge'
 
@@ -8,10 +9,10 @@ function CertificateTest() {
     {
       available: true,
       issued_by: 'Google',
-      certificate_type: 'completion',
+      type: 'completion',
       skills_covered: ['Machine Learning', 'Python', 'Data Analysis'],
       eligibility_requirements: 'Attend the full workshop and complete the assessment',
-      cost_type: 'free',
+      cost: 'free',
       delivery_method: 'after_assessment',
       certificate_link: 'https://developers.google.com/certification',
       additional_info: 'Certificate will be sent via email within 5 business days'
@@ -19,11 +20,11 @@ function CertificateTest() {
     {
       available: true,
       issued_by: 'Stanford University',
-      certificate_type: 'achievement',
+      type: 'achievement',
       skills_covered: ['Data Science', 'Statistics', 'R Programming'],
       eligibility_requirements: 'Complete all assignments and pass final evaluation with 80% score',
-      cost_type: 'paid',
-      cost_amount: 50,
+      cost: 'paid',
+      amount: 50,
       delivery_method: 'after_requirements',
       certificate_link: 'https://online.stanford.edu/certificates',
       additional_info: 'Official Stanford continuing education certificate'
@@ -31,10 +32,10 @@ function CertificateTest() {
     {
       available: true,
       issued_by: 'Tech Events Inc',
-      certificate_type: 'participation',
+      type: 'participation',
       skills_covered: ['Technology Trends', 'Networking', 'Leadership'],
       eligibility_requirements: 'Attend at least 50% of the sessions',
-      cost_type: 'free',
+      cost: 'free',
       delivery_method: 'automatic'
     }
   ]

@@ -196,6 +196,22 @@ export const DATE_FORMATS = {
   datetime: 'MMM dd, yyyy h:mm a',
 }
 
+// Certificate types
+export const CERTIFICATE_TYPES = [
+  { value: 'participation', label: 'Participation' },
+  { value: 'completion', label: 'Completion' },
+  { value: 'achievement', label: 'Achievement' },
+  { value: 'other', label: 'Other' },
+]
+
+// Certificate delivery methods
+export const CERTIFICATE_DELIVERY_METHODS = [
+  { value: 'automatic', label: 'Automatically' },
+  { value: 'after_attending', label: 'After attending' },
+  { value: 'after_assessment', label: 'After completing an assessment' },
+  { value: 'after_requirements', label: 'After completing the event requirements' },
+]
+
 // Social media platforms
 export const SOCIAL_PLATFORMS = [
   { value: 'linkedin', label: 'LinkedIn', icon: 'linkedin' },

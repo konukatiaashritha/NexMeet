@@ -9,6 +9,7 @@ import { eventsAPI } from '../../services/eventsService'
 import { useAuth } from '../../context/AuthContext'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
 import Button from '../../components/common/Button'
+import CertificateInfo from '../../components/events/CertificateInfo'
 
 function EventDetails() {
   const { id } = useParams()
@@ -257,6 +258,13 @@ function EventDetails() {
               {event.description}
             </div>
           </div>
+
+          {/* Certificate Information */}
+          {event.certificate && (
+            <div className="px-8 pb-8">
+              <CertificateInfo certificate={event.certificate} />
+            </div>
+          )}
 
           {/* Speakers Section (if available) */}
           {event.speakers && event.speakers.length > 0 && (

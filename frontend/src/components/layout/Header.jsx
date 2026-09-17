@@ -53,6 +53,16 @@ function Header() {
             >
               Communities
             </Link>
+            <Link
+              to="/certificate-test"
+              className={`text-sm font-medium transition-colors ${
+                isActiveLink('/certificate-test')
+                  ? 'text-primary-600'
+                  : 'text-secondary-600 hover:text-secondary-900'
+              }`}
+            >
+              Certificates
+            </Link>
           </nav>
 
           {/* Desktop Auth Section */}
@@ -169,6 +179,13 @@ function Header() {
                 onClick={() => setIsMenuOpen(false)}
               >
                 Communities
+              </Link>
+              <Link
+                to="/certificate-test"
+                className="block py-2 text-base font-medium text-secondary-600 hover:text-secondary-900"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Certificates
               </Link>
               
               {isAuthenticated ? (

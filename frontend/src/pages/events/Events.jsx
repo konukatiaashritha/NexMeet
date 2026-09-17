@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Search, Filter, MapPin, Calendar, Users, Clock, Bookmark, BookmarkCheck } from 'lucide-react'
+import { Search, Filter, MapPin, Calendar, Users, Clock, Bookmark, BookmarkCheck, Award } from 'lucide-react'
 import { eventsAPI } from '../../services/eventsService'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
 import Button from '../../components/common/Button'
@@ -289,8 +289,16 @@ function EventCard({ event }) {
 
         {/* Footer */}
         <div className="flex justify-between items-center mt-6 pt-4 border-t border-secondary-100">
-          <div className="text-sm text-secondary-600">
-            by <span className="font-medium">{event.organizer_name || 'Organizer'}</span>
+          <div className="flex items-center gap-3">
+            <div className="text-sm text-secondary-600">
+              by <span className="font-medium">{event.organizer_name || 'Organizer'}</span>
+            </div>
+            {event.certificate?.available && (
+              <div className="flex items-center text-primary-600 text-xs">
+                <Award className="w-3 h-3 mr-1" />
+                Certificate
+              </div>
+            )}
           </div>
           <div className="text-lg font-semibold text-secondary-900">
             {event.price === 0 || event.price === null ? 'Free' : `$${event.price}`}

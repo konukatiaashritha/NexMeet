@@ -1,10 +1,11 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { CheckCircle, Calendar, MapPin, Users, Search, Clock } from 'lucide-react'
+import { CheckCircle, Calendar, MapPin, Users, Search, Clock, Award } from 'lucide-react'
 import { eventsAPI } from '../../services/eventsService'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
 import Button from '../../components/common/Button'
+import CertificateInfo from '../../components/events/CertificateInfo'
 
 function RegisteredEvents() {
   const { data: registeredEventsData, isLoading, error } = useQuery({
@@ -214,7 +215,7 @@ function RegisteredEventCard({ event, isUpcoming }) {
 
         {/* Additional Info for Past Events */}
         {!isUpcoming && (
-          <div className="mt-4 pt-4 border-t border-secondary-100">
+          <div className="mt-4 pt-4 border-t border-secondary-100 space-y-4">
             <div className="flex items-center justify-between text-sm">
               <span className="text-secondary-600">Event completed</span>
               {event.can_review && (
@@ -226,6 +227,13 @@ function RegisteredEventCard({ event, isUpcoming }) {
                 </Button>
               )}
             </div>
+
+            {/* Certificate Information for Past Events */}
+            {event.certificate?.available && (
+              <div className="mt-3">
+                <CertificateInfo certificate={event.certificate} compact={true} />
+              </div>
+            )}
           </div>
         )}
 

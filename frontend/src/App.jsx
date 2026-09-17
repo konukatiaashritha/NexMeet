@@ -12,6 +12,7 @@ import Dashboard from './pages/dashboard/Dashboard'
 import SavedEvents from './pages/events/SavedEvents'
 import RegisteredEvents from './pages/events/RegisteredEvents'
 import Communities from './pages/community/Communities'
+import CertificateTest from './pages/CertificateTest'
 import NotFound from './pages/NotFound'
 import ProtectedRoute from './components/common/ProtectedRoute'
 
@@ -27,6 +28,7 @@ function App() {
           <Route path="/events" element={<Events />} />
           <Route path="/events/:id" element={<EventDetails />} />
           <Route path="/communities" element={<Communities />} />
+          <Route path="/certificate-test" element={<CertificateTest />} />
           
           {/* Protected Routes */}
           <Route path="/dashboard" element={

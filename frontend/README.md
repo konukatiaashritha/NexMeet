@@ -11,6 +11,7 @@ A modern React application for event discovery and professional networking.
 - 🎯 **Personalized Recommendations** - Get event suggestions based on your interests
 - 📍 **Location Flexibility** - Online, offline, and hybrid events
 - 📱 **Responsive Design** - Works seamlessly on desktop and mobile
+- 🏆 **Certificate Information** - View certificate opportunities for events (supporting feature)
 
 ## Tech Stack
 
@@ -87,8 +88,20 @@ This is a complete MVP frontend implementation including:
 - ✅ Saved Events
 - ✅ Registered Events
 - ✅ Communities (placeholder)
+- ✅ Certificate Information (supporting feature)
 - ✅ Responsive Design
 - ✅ Modern UI Components
+
+### Certificate Information Feature
+
+The certificate feature is implemented as a **small supporting feature** that:
+- Shows certificate availability indicators on event cards
+- Displays detailed certificate information on event details pages
+- Maintains focus on networking as the primary platform purpose
+- Includes certificate info in user's past events
+- Uses amber/orange theming to distinguish from main features
+
+See `CERTIFICATE_FEATURE_DEMO.md` for detailed information about the certificate implementation.
 
 ## Next Steps
 

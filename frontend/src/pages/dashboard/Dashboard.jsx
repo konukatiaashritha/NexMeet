@@ -9,6 +9,7 @@ import { eventsAPI } from '../../services/eventsService'
 import { useAuth } from '../../context/AuthContext'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
 import Button from '../../components/common/Button'
+import CertificateBadge from '../../components/events/CertificateBadge'
 
 function Dashboard() {
   const { user } = useAuth()
@@ -238,9 +239,14 @@ function EventCard({ event }) {
               )}
             </div>
             {event.location && (
-              <div className="flex items-center text-secondary-600 text-sm">
+              <div className="flex items-center text-secondary-600 text-sm mb-2">
                 <MapPin className="w-4 h-4 mr-2" />
                 {event.location}
+              </div>
+            )}
+            {event.certificate?.available && (
+              <div className="mt-2">
+                <CertificateBadge certificate={event.certificate} size="xs" />
               </div>
             )}
           </div>

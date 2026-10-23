@@ -82,29 +82,21 @@ export function AuthProvider({ children }) {
   }, [])
 
   const login = async (email, password) => {
-    try {
-      const response = await authAPI.login(email, password)
-      dispatch({
-        type: AUTH_ACTIONS.LOGIN_SUCCESS,
-        payload: response,
-      })
-      return response
-    } catch (error) {
-      throw error
-    }
+    const response = await authAPI.login(email, password)
+    dispatch({
+      type: AUTH_ACTIONS.LOGIN_SUCCESS,
+      payload: response,
+    })
+    return response
   }
 
   const register = async (userData) => {
-    try {
-      const response = await authAPI.register(userData)
-      dispatch({
-        type: AUTH_ACTIONS.LOGIN_SUCCESS,
-        payload: response,
-      })
-      return response
-    } catch (error) {
-      throw error
-    }
+    const response = await authAPI.register(userData)
+    dispatch({
+      type: AUTH_ACTIONS.LOGIN_SUCCESS,
+      payload: response,
+    })
+    return response
   }
 
   const logout = () => {

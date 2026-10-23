@@ -1,44 +1,72 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { 
-  Calendar, MapPin, Users, BookmarkIcon, Clock, 
-  TrendingUp, Award, User, ArrowRight 
+import {
+  Calendar, MapPin, Users, BookmarkIcon, Clock,
+  TrendingUp, Award, User, ArrowRight, UserPlus, Network
 } from 'lucide-react'
 import { eventsAPI } from '../../services/eventsService'
+import { networkingAPI } from '../../services/networkingService'
+import { notificationAPI } from '../../services/notificationService'
 import { useAuth } from '../../context/AuthContext'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
 import Button from '../../components/common/Button'
-import CertificateBadge from '../../components/events/CertificateBadge'
+
+const formatDate = (dateString) =>
+  new Date(dateString).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })
+
+const formatDateTime = (dateString) => {
+  if (!dateString) return ''
+  const d = new Date(dateString)
+  return d.toLocaleDateString('en-IN', { month: 'short', day: 'numeric' }) +
+    ' • ' + d.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true })
+}
 
 function Dashboard() {
   const { user } = useAuth()
 
-  const { data: registeredEvents, isLoading: loadingRegistered } = useQuery({
+  const { data: registeredData, isLoading: loadingRegistered } = useQuery({
     queryKey: ['registered-events'],
     queryFn: eventsAPI.getRegisteredEvents,
   })
 
-  const { data: savedEvents, isLoading: loadingSaved } = useQuery({
+  const { data: savedData, isLoading: loadingSaved } = useQuery({
     queryKey: ['saved-events'],
     queryFn: eventsAPI.getSavedEvents,
   })
 
-  const { data: recommendedEvents, isLoading: loadingRecommended } = useQuery({
+  const { data: recommendedEvents } = useQuery({
     queryKey: ['recommended-events'],
-    queryFn: () => eventsAPI.getEvents({ limit: 3, recommended: true }),
+    queryFn: () => eventsAPI.getEvents({ limit: 3, sort: 'newest' }),
   })
 
-  const upcomingEvents = registeredEvents?.events?.filter(event => 
-    new Date(event.start_date) > new Date()
-  ).slice(0, 3) || []
+  const { data: connectionsData } = useQuery({
+    queryKey: ['connections'],
+    queryFn: networkingAPI.getConnections,
+  })
 
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-    })
-  }
+  const { data: requestsData } = useQuery({
+    queryKey: ['connection-requests'],
+    queryFn: networkingAPI.getConnectionRequests,
+  })
+
+  const { data: notifData } = useQuery({
+    queryKey: ['notifications-count'],
+    queryFn: () => notificationAPI.getNotifications({ limit: 3 }),
+    staleTime: 30 * 1000,
+  })
+
+  const allRegistered = registeredData?.data || []
+  const allSaved = savedData?.data || []
+  const connections = connectionsData || []
+  const pendingCount = requestsData?.received?.length || 0
+  const recentNotifs = notifData?.data?.slice(0, 3) || []
+
+  const upcomingEvents = allRegistered
+    .filter(e => e.derivedStatus === 'UPCOMING' || e.derivedStatus === 'ONGOING')
+    .slice(0, 3)
+
+  const nextEvent = upcomingEvents[0]
 
   return (
     <div className="min-h-screen bg-secondary-50">
@@ -46,308 +74,259 @@ function Dashboard() {
         {/* Welcome Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-secondary-900 mb-2">
-            Welcome back, {user?.first_name}!
+            Welcome back, {user?.firstName || user?.first_name || 'there'}!
           </h1>
-          <p className="text-secondary-600">
-            Here's what's happening in your network
-          </p>
+          <p className="text-secondary-600">Here's what's happening in your network</p>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <StatCard
             icon={<Calendar className="w-6 h-6" />}
             title="Upcoming Events"
             value={upcomingEvents.length}
             color="bg-blue-500"
+            link="/registered-events"
           />
           <StatCard
             icon={<BookmarkIcon className="w-6 h-6" />}
             title="Saved Events"
-            value={savedEvents?.events?.length || 0}
-            color="bg-green-500"
+            value={allSaved.length}
+            color="bg-purple-500"
+            link="/saved-events"
           />
           <StatCard
             icon={<Users className="w-6 h-6" />}
-            title="Network"
-            value={user?.connections_count || 0}
-            color="bg-purple-500"
+            title="Connections"
+            value={connections.length}
+            color="bg-green-500"
+            link="/networking"
           />
-          <StatCard
-            icon={<Award className="w-6 h-6" />}
-            title="Events Attended"
-            value={user?.events_attended || 0}
-            color="bg-orange-500"
-          />
+          {pendingCount > 0 ? (
+            <StatCard
+              icon={<UserPlus className="w-6 h-6" />}
+              title="Pending Requests"
+              value={pendingCount}
+              color="bg-orange-500"
+              link="/networking"
+            />
+          ) : (
+            <StatCard
+              icon={<Network className="w-6 h-6" />}
+              title="Events Registered"
+              value={allRegistered.filter(e => e.registrationStatus === 'REGISTERED').length}
+              color="bg-teal-500"
+              link="/registered-events"
+            />
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Content */}
+          {/* Left Column */}
           <div className="lg:col-span-2 space-y-8">
-            {/* Upcoming Events */}
-            <section>
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold text-secondary-900">Upcoming Events</h2>
-                <Link to="/registered-events" className="text-primary-600 hover:text-primary-700 font-medium">
-                  View all <ArrowRight className="w-4 h-4 inline ml-1" />
-                </Link>
-              </div>
-
-              {loadingRegistered ? (
-                <div className="flex justify-center py-8">
-                  <LoadingSpinner />
+            {/* Next Event */}
+            {nextEvent && (
+              <section>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold text-secondary-900">Next Event</h2>
+                  <Link to="/registered-events" className="text-primary-600 hover:text-primary-700 text-sm font-medium flex items-center gap-1">
+                    View all <ArrowRight className="w-4 h-4" />
+                  </Link>
                 </div>
-              ) : upcomingEvents.length === 0 ? (
-                <EmptyState
-                  icon={<Calendar className="w-8 h-8" />}
-                  title="No upcoming events"
-                  description="You haven't registered for any events yet"
-                  action={
-                    <Link to="/events">
-                      <Button>Discover Events</Button>
+                <div className="card p-6 border-l-4 border-primary-500">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <span className="px-2 py-1 bg-primary-100 text-primary-700 text-xs font-medium rounded-full capitalize">
+                        {nextEvent.category}
+                      </span>
+                      <h3 className="text-xl font-semibold text-secondary-900 mt-2 mb-3">{nextEvent.title}</h3>
+                      <div className="space-y-2">
+                        <div className="flex items-center text-secondary-600 text-sm">
+                          <Calendar className="w-4 h-4 mr-2" />
+                          <span>{formatDateTime(nextEvent.startDateTime)}</span>
+                        </div>
+                        {(nextEvent.location || nextEvent.city) && (
+                          <div className="flex items-center text-secondary-600 text-sm">
+                            <MapPin className="w-4 h-4 mr-2" />
+                            <span>{nextEvent.isOnline ? 'Online' : (nextEvent.location || nextEvent.city)}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center text-secondary-600 text-sm">
+                          <Users className="w-4 h-4 mr-2" />
+                          <span>{nextEvent.registeredCount || 0} registered</span>
+                        </div>
+                      </div>
+                    </div>
+                    {nextEvent.derivedStatus === 'ONGOING' && (
+                      <span className="px-3 py-1 bg-green-100 text-green-700 text-sm font-medium rounded-full">
+                        Live Now!
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-4">
+                    <Link to={`/events/${nextEvent.id}`}>
+                      <Button size="sm">View Event Details</Button>
                     </Link>
-                  }
-                />
-              ) : (
-                <div className="space-y-4">
-                  {upcomingEvents.map(event => (
-                    <EventCard key={event.id} event={event} />
-                  ))}
+                  </div>
                 </div>
-              )}
-            </section>
+              </section>
+            )}
 
-            {/* Recommended Events */}
-            <section>
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center">
-                  <TrendingUp className="w-5 h-5 text-primary-600 mr-2" />
-                  <h2 className="text-xl font-semibold text-secondary-900">Recommended for You</h2>
+            {/* Upcoming Events List */}
+            {upcomingEvents.length > 1 && (
+              <section>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold text-secondary-900">Your Upcoming Events</h2>
                 </div>
-              </div>
-
-              {loadingRecommended ? (
-                <div className="flex justify-center py-8">
-                  <LoadingSpinner />
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 gap-4">
-                  {recommendedEvents?.events?.slice(0, 3).map(event => (
-                    <RecommendedEventCard key={event.id} event={event} />
-                  ))}
-                </div>
-              )}
-            </section>
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Profile Completion */}
-            <ProfileCompletionCard user={user} />
-
-            {/* Recent Activity */}
-            <section>
-              <h3 className="text-lg font-semibold text-secondary-900 mb-4">Recent Activity</h3>
-              <div className="card p-4">
                 <div className="space-y-3">
-                  <ActivityItem
-                    icon={<Users className="w-4 h-4 text-blue-500" />}
-                    text="You registered for React Conference 2024"
-                    time="2 hours ago"
-                  />
-                  <ActivityItem
-                    icon={<BookmarkIcon className="w-4 h-4 text-green-500" />}
-                    text="You saved 'AI in Healthcare' workshop"
-                    time="1 day ago"
-                  />
-                  <ActivityItem
-                    icon={<User className="w-4 h-4 text-purple-500" />}
-                    text="Sarah Chen accepted your connection"
-                    time="2 days ago"
+                  {upcomingEvents.slice(1).map(event => (
+                    <Link key={event.id} to={`/events/${event.id}`}>
+                      <div className="card p-4 hover:shadow-md transition-all flex items-center gap-4">
+                        <div className="w-12 h-12 bg-primary-100 rounded-lg flex flex-col items-center justify-center flex-shrink-0">
+                          <span className="text-xs font-bold text-primary-700">
+                            {new Date(event.startDateTime).toLocaleDateString('en-IN', { month: 'short' }).toUpperCase()}
+                          </span>
+                          <span className="text-lg font-bold text-primary-700">
+                            {new Date(event.startDateTime).getDate()}
+                          </span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-medium text-secondary-900 truncate">{event.title}</h4>
+                          <p className="text-sm text-secondary-500">{event.isOnline ? 'Online' : (event.city || event.location)}</p>
+                        </div>
+                        {event.certificateAvailable && (
+                          <Award className="w-4 h-4 text-primary-500 flex-shrink-0" />
+                        )}
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Discover More Events */}
+            <section>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-secondary-900">Discover Events</h2>
+                <Link to="/events" className="text-primary-600 hover:text-primary-700 text-sm font-medium flex items-center gap-1">
+                  View all <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {(recommendedEvents?.data || []).slice(0, 4).map(event => (
+                  <Link key={event.id} to={`/events/${event.id}`}>
+                    <div className="card p-4 hover:shadow-md transition-all">
+                      <span className="px-2 py-1 bg-primary-100 text-primary-700 text-xs font-medium rounded-full capitalize">
+                        {event.category}
+                      </span>
+                      <h4 className="font-medium text-secondary-900 mt-2 mb-1 line-clamp-2">{event.title}</h4>
+                      <p className="text-xs text-secondary-500">{formatDate(event.startDateTime)}</p>
+                      <p className="text-xs text-secondary-500">{event.isOnline ? 'Online' : event.city}</p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          </div>
+
+          {/* Right Column */}
+          <div className="space-y-6">
+            {/* Profile Quick View */}
+            <div className="card p-6">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-14 h-14 rounded-full bg-primary-100 flex items-center justify-center">
+                  {user?.profile?.profilePhoto ? (
+                    <img src={user.profile.profilePhoto} className="w-full h-full rounded-full object-cover" alt="Profile" />
+                  ) : (
+                    <User className="w-7 h-7 text-primary-600" />
+                  )}
+                </div>
+                <div>
+                  <h3 className="font-semibold text-secondary-900">
+                    {user?.firstName || user?.first_name} {user?.lastName || user?.last_name}
+                  </h3>
+                  <p className="text-sm text-secondary-500">
+                    {user?.profile?.jobTitle || user?.profile?.field || 'NexMeet Member'}
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-2 text-sm text-secondary-600 mb-4">
+                <div className="flex justify-between">
+                  <span>Profile complete</span>
+                  <span className="font-medium text-primary-600">
+                    {user?.profile?.about ? '80%' : '40%'}
+                  </span>
+                </div>
+                <div className="w-full bg-secondary-100 rounded-full h-2">
+                  <div
+                    className="bg-primary-600 h-2 rounded-full"
+                    style={{ width: user?.profile?.about ? '80%' : '40%' }}
                   />
                 </div>
               </div>
-            </section>
-
-            {/* Quick Actions */}
-            <section>
-              <h3 className="text-lg font-semibold text-secondary-900 mb-4">Quick Actions</h3>
-              <div className="space-y-3">
-                <Link to="/events" className="block">
-                  <Button variant="outline" className="w-full justify-start">
-                    <Calendar className="w-4 h-4 mr-2" />
-                    Explore Events
-                  </Button>
-                </Link>
-                <Link to="/profile" className="block">
-                  <Button variant="outline" className="w-full justify-start">
-                    <User className="w-4 h-4 mr-2" />
-                    Update Profile
-                  </Button>
-                </Link>
-                <Link to="/saved-events" className="block">
-                  <Button variant="outline" className="w-full justify-start">
-                    <BookmarkIcon className="w-4 h-4 mr-2" />
-                    Saved Events
-                  </Button>
-                </Link>
-              </div>
-            </section>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// Component: Stat Card
-function StatCard({ icon, title, value, color }) {
-  return (
-    <div className="card p-6">
-      <div className="flex items-center">
-        <div className={`${color} text-white rounded-lg p-3 mr-4`}>
-          {icon}
-        </div>
-        <div>
-          <p className="text-2xl font-bold text-secondary-900">{value}</p>
-          <p className="text-secondary-600 text-sm">{title}</p>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// Component: Event Card
-function EventCard({ event }) {
-  return (
-    <Link to={`/events/${event.id}`} className="block">
-      <div className="card p-4 hover:shadow-md transition-shadow">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <h3 className="font-semibold text-secondary-900 mb-2">{event.title}</h3>
-            <div className="flex items-center text-secondary-600 text-sm mb-2">
-              <Calendar className="w-4 h-4 mr-2" />
-              {formatDate(event.start_date)}
-              {event.start_time && (
-                <span className="ml-2">
-                  • {new Date(`2000-01-01T${event.start_time}`).toLocaleTimeString('en-US', {
-                    hour: 'numeric',
-                    minute: '2-digit',
-                    hour12: true,
-                  })}
-                </span>
-              )}
+              <Link to="/profile">
+                <Button variant="outline" size="sm" className="w-full">Edit Profile</Button>
+              </Link>
             </div>
-            {event.location && (
-              <div className="flex items-center text-secondary-600 text-sm mb-2">
-                <MapPin className="w-4 h-4 mr-2" />
-                {event.location}
+
+            {/* Recent Notifications */}
+            {recentNotifs.length > 0 && (
+              <div className="card p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold text-secondary-900">Recent Activity</h3>
+                  <Link to="/notifications" className="text-primary-600 text-sm">View all</Link>
+                </div>
+                <div className="space-y-3">
+                  {recentNotifs.map(notif => (
+                    <div key={notif.id} className={`p-3 rounded-lg text-sm ${notif.isRead ? 'bg-secondary-50' : 'bg-primary-50'}`}>
+                      <p className="font-medium text-secondary-900 line-clamp-1">{notif.title}</p>
+                      <p className="text-secondary-500 text-xs mt-0.5 line-clamp-2">{notif.message}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
-            {event.certificate?.available && (
-              <div className="mt-2">
-                <CertificateBadge certificate={event.certificate} size="xs" />
+
+            {/* Quick Links */}
+            <div className="card p-6">
+              <h3 className="font-semibold text-secondary-900 mb-4">Quick Links</h3>
+              <div className="space-y-2">
+                {[
+                  { to: '/events', icon: Calendar, label: 'Discover Events' },
+                  { to: '/networking', icon: Users, label: 'My Connections' },
+                  { to: '/people', icon: UserPlus, label: 'Find People' },
+                  { to: '/saved-events', icon: BookmarkIcon, label: 'Saved Events' },
+                  { to: '/communities', icon: Network, label: 'Communities' },
+                ].map(({ to, icon: Icon, label }) => (
+                  <Link key={to} to={to} className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary-50 transition-colors text-secondary-700 hover:text-primary-600">
+                    <Icon className="w-4 h-4" />
+                    <span className="text-sm font-medium">{label}</span>
+                    <ArrowRight className="w-3 h-3 ml-auto opacity-50" />
+                  </Link>
+                ))}
               </div>
-            )}
+            </div>
           </div>
-          <span className="px-2 py-1 bg-primary-100 text-primary-700 text-xs font-medium rounded-full">
-            {event.category}
-          </span>
         </div>
-      </div>
-    </Link>
-  )
-}
-
-// Component: Recommended Event Card
-function RecommendedEventCard({ event }) {
-  return (
-    <Link to={`/events/${event.id}`} className="block">
-      <div className="card p-4 hover:shadow-md transition-shadow border-l-4 border-l-primary-500">
-        <div className="flex items-start justify-between mb-2">
-          <h3 className="font-semibold text-secondary-900 flex-1">{event.title}</h3>
-          <span className="px-2 py-1 bg-primary-100 text-primary-700 text-xs font-medium rounded-full ml-2">
-            {event.category}
-          </span>
-        </div>
-        <p className="text-secondary-600 text-sm mb-3 line-clamp-2">{event.description}</p>
-        <div className="text-xs text-primary-600 bg-primary-50 px-2 py-1 rounded inline-block">
-          Recommended: Matches your interests
-        </div>
-      </div>
-    </Link>
-  )
-}
-
-// Component: Profile Completion Card
-function ProfileCompletionCard({ user }) {
-  const completionFields = [
-    { field: 'bio', label: 'Bio' },
-    { field: 'skills', label: 'Skills' },
-    { field: 'interests', label: 'Interests' },
-    { field: 'career_field', label: 'Career Field' },
-    { field: 'location', label: 'Location' },
-  ]
-
-  const completedFields = completionFields.filter(({ field }) => 
-    user?.[field] && (Array.isArray(user[field]) ? user[field].length > 0 : true)
-  ).length
-
-  const completionPercentage = Math.round((completedFields / completionFields.length) * 100)
-
-  if (completionPercentage === 100) return null
-
-  return (
-    <div className="card p-4">
-      <h3 className="text-lg font-semibold text-secondary-900 mb-3">Complete Your Profile</h3>
-      <div className="mb-3">
-        <div className="flex justify-between text-sm text-secondary-600 mb-1">
-          <span>{completionPercentage}% Complete</span>
-        </div>
-        <div className="w-full bg-secondary-200 rounded-full h-2">
-          <div 
-            className="bg-primary-600 h-2 rounded-full transition-all" 
-            style={{ width: `${completionPercentage}%` }}
-          />
-        </div>
-      </div>
-      <p className="text-secondary-600 text-sm mb-3">
-        Complete your profile to get better event recommendations
-      </p>
-      <Link to="/profile">
-        <Button variant="outline" size="sm" className="w-full">
-          Complete Profile
-        </Button>
-      </Link>
-    </div>
-  )
-}
-
-// Component: Activity Item
-function ActivityItem({ icon, text, time }) {
-  return (
-    <div className="flex items-start">
-      <div className="mr-3 mt-0.5">{icon}</div>
-      <div className="flex-1">
-        <p className="text-secondary-900 text-sm">{text}</p>
-        <p className="text-secondary-500 text-xs">{time}</p>
       </div>
     </div>
   )
 }
 
-// Component: Empty State
-function EmptyState({ icon, title, description, action }) {
-  return (
-    <div className="text-center py-8">
-      <div className="w-16 h-16 bg-secondary-100 rounded-full flex items-center justify-center mx-auto mb-4 text-secondary-400">
-        {icon}
+function StatCard({ icon, title, value, color, link }) {
+  const content = (
+    <div className="card p-6 hover:shadow-md transition-all">
+      <div className="flex items-center gap-3 mb-3">
+        <div className={`w-10 h-10 ${color} bg-opacity-10 rounded-lg flex items-center justify-center text-white`}
+          style={{ background: `${color.replace('bg-', '')}20` }}>
+          <span className={color.replace('bg-', 'text-')}>{icon}</span>
+        </div>
       </div>
-      <h3 className="text-lg font-semibold text-secondary-900 mb-2">{title}</h3>
-      <p className="text-secondary-600 mb-4">{description}</p>
-      {action}
+      <div className="text-3xl font-bold text-secondary-900 mb-1">{value}</div>
+      <div className="text-sm text-secondary-600">{title}</div>
     </div>
   )
+  return link ? <Link to={link}>{content}</Link> : content
 }
 
 export default Dashboard

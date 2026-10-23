@@ -1,0 +1,742 @@
+// This is your Prisma schema file
+// NexMeet - Event-centered networking platform
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum Role {
+  USER
+  ORGANIZER
+  ADMIN
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  CANCELLED
+  ARCHIVED
+}
+
+enum EventCategory {
+  workshop
+  conference
+  seminar
+  meetup
+  hackathon
+  webinar
+  networking
+  career
+  startup
+  research
+  community
+  lecture
+  tech
+  company
+  college
+  other
+}
+
+enum ExperienceLevel {
+  beginner
+  intermediate
+  advanced
+  all
+}
+
+enum RegistrationStatus {
+  REGISTERED
+  CANCELLED
+  WAITLISTED
+}
+
+enum AttendanceStatus {
+  REGISTERED
+  ATTENDED
+  DID_NOT_ATTEND
+}
+
+enum ConnectionStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELLED
+  REMOVED
+}
+
+enum NotificationType {
+  REGISTRATION_CONFIRMED
+  CONNECTION_REQUEST
+  CONNECTION_ACCEPTED
+  EVENT_REMINDER
+  EVENT_UPDATED
+  EVENT_CANCELLED
+  COMMUNITY_UPDATE
+  RECOMMENDATION
+  REVIEW_REMINDER
+  REGISTRATION_CLOSING
+}
+
+enum VerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum ReportStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+  DISMISSED
+}
+
+enum ReportTargetType {
+  USER
+  EVENT
+  COMMUNITY_POST
+  COMMENT
+}
+
+enum SyncStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+enum CertificateType {
+  participation
+  completion
+  achievement
+  other
+}
+
+enum PrivacyLevel {
+  PUBLIC
+  CONNECTIONS
+  PRIVATE
+}
+
+enum AttendanceVisibility {
+  VISIBLE
+  CONNECTIONS_ONLY
+  HIDDEN
+}
+
+enum ConnectionPreference {
+  ANYONE
+  SAME_INTERESTS
+  SAME_EVENTS
+  CONNECTIONS_OF_CONNECTIONS
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// USER & PROFILE
+// ─────────────────────────────────────────────────────────────────────────────
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  password      String
+  firstName     String
+  lastName      String
+  role          Role     @default(USER)
+  isActive      Boolean  @default(true)
+  emailVerified Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Profile
+  profile       Profile?
+
+  // Organizer profile
+  organizer     Organizer?
+
+  // Events
+  registrations     EventRegistration[]
+  savedEvents       SavedEvent[]
+  attendanceRecords EventAttendance[]
+
+  // Social
+  connectionsSent     Connection[] @relation("ConnectionRequester")
+  connectionsReceived Connection[] @relation("ConnectionTarget")
+
+  // Community
+  communityPosts    CommunityPost[]
+  communityComments CommunityComment[]
+
+  // Notifications
+  notifications Notification[]
+
+  // Reviews
+  reviews Review[]
+
+  // Reports
+  reports     Report[] @relation("Reporter")
+  reportedBy  Report[] @relation("ReportedUser")
+
+  // Admin audit
+  eventChanges EventChangeHistory[]
+
+  @@map("users")
+}
+
+model Profile {
+  id                   String               @id @default(cuid())
+  userId               String               @unique
+  user                 User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Basic info
+  profilePhoto         String?
+  about                String?              @db.Text
+  careerGoals          String?              @db.Text
+  college              String?
+  company              String?
+  jobTitle             String?
+  field                String?
+  location             String?
+  city                 String?
+  website              String?
+  linkedinUrl          String?
+  githubUrl            String?
+  twitterUrl           String?
+  experienceLevel      ExperienceLevel?
+
+  // Privacy settings
+  profileVisibility    PrivacyLevel         @default(PUBLIC)
+  skillsVisible        Boolean              @default(true)
+  interestsVisible     Boolean              @default(true)
+  collegeCompanyVisible Boolean             @default(true)
+  networkingIntentVisible Boolean           @default(true)
+  lookingForVisible    Boolean              @default(true)
+  attendanceVisibility AttendanceVisibility @default(VISIBLE)
+  connectionPreference ConnectionPreference @default(ANYONE)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  skills           UserSkill[]
+  interests        UserInterest[]
+  networkingIntents UserNetworkingIntent[]
+  lookingForItems  UserLookingFor[]
+
+  @@map("profiles")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SKILLS & INTERESTS (normalized)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Skill {
+  id        String      @id @default(cuid())
+  name      String      @unique
+  createdAt DateTime    @default(now())
+  
+  users     UserSkill[]
+  events    EventSkill[]
+
+  @@map("skills")
+}
+
+model Interest {
+  id        String         @id @default(cuid())
+  name      String         @unique
+  createdAt DateTime       @default(now())
+  
+  users     UserInterest[]
+
+  @@map("interests")
+}
+
+model UserSkill {
+  profileId String
+  skillId   String
+  profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  skill     Skill   @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@id([profileId, skillId])
+  @@map("user_skills")
+}
+
+model UserInterest {
+  profileId  String
+  interestId String
+  profile    Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  interest   Interest @relation(fields: [interestId], references: [id], onDelete: Cascade)
+
+  @@id([profileId, interestId])
+  @@map("user_interests")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// NETWORKING INTENT & LOOKING FOR
+// ─────────────────────────────────────────────────────────────────────────────
+
+model NetworkingIntentOption {
+  id          String               @id @default(cuid())
+  value       String               @unique
+  label       String
+  icon        String?
+  sortOrder   Int                  @default(0)
+  
+  users       UserNetworkingIntent[]
+
+  @@map("networking_intent_options")
+}
+
+model LookingForOption {
+  id          String           @id @default(cuid())
+  value       String           @unique
+  label       String
+  description String?
+  sortOrder   Int              @default(0)
+  
+  users       UserLookingFor[]
+
+  @@map("looking_for_options")
+}
+
+model UserNetworkingIntent {
+  profileId String
+  intentId  String
+  profile   Profile               @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  intent    NetworkingIntentOption @relation(fields: [intentId], references: [id], onDelete: Cascade)
+
+  @@id([profileId, intentId])
+  @@map("user_networking_intents")
+}
+
+model UserLookingFor {
+  profileId        String
+  lookingForId     String
+  profile          Profile          @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  lookingForOption LookingForOption @relation(fields: [lookingForId], references: [id], onDelete: Cascade)
+
+  @@id([profileId, lookingForId])
+  @@map("user_looking_for")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EVENTS
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Event {
+  id                    String        @id @default(cuid())
+  title                 String
+  description           String        @db.Text
+  organizerId           String
+  organizer             Organizer     @relation(fields: [organizerId], references: [id])
+  
+  category              EventCategory @default(other)
+  startDateTime         DateTime
+  endDateTime           DateTime
+  timezone              String        @default("Asia/Kolkata")
+  
+  // Location
+  location              String?
+  city                  String?
+  area                  String?
+  isOnline              Boolean       @default(false)
+  onlineUrl             String?
+  
+  // Capacity & price
+  capacity              Int?
+  price                 Float         @default(0)
+  registrationDeadline  DateTime?
+  registrationUrl       String?
+  
+  // Experience & features
+  experienceLevel       ExperienceLevel @default(all)
+  networkingAvailable   Boolean       @default(false)
+  certificateAvailable  Boolean       @default(false)
+  
+  // Status
+  status                EventStatus   @default(DRAFT)
+  
+  // External source tracking
+  externalId            String?
+  sourceId              String?
+  source                EventSource?  @relation(fields: [sourceId], references: [id])
+  
+  // Metadata
+  coverImage            String?
+  tags                  String[]
+  viewCount             Int           @default(0)
+  
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  // Relations
+  skills                EventSkill[]
+  speakers              EventSpeaker[]
+  resources             EventResource[]
+  certificate           EventCertificate?
+  registrations         EventRegistration[]
+  savedBy               SavedEvent[]
+  attendanceRecords     EventAttendance[]
+  community             Community?
+  reviews               Review[]
+  changeHistory         EventChangeHistory[]
+  syncLogs              EventSyncLog[]
+
+  @@index([startDateTime])
+  @@index([city])
+  @@index([category])
+  @@index([organizerId])
+  @@index([status])
+  @@index([isOnline])
+  @@map("events")
+}
+
+model EventSkill {
+  eventId String
+  skillId String
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  skill   Skill  @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@id([eventId, skillId])
+  @@map("event_skills")
+}
+
+model EventSpeaker {
+  id          String   @id @default(cuid())
+  eventId     String
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  name        String
+  title       String?
+  company     String?
+  bio         String?  @db.Text
+  photoUrl    String?
+  linkedinUrl String?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  @@map("event_speakers")
+}
+
+model EventResource {
+  id          String   @id @default(cuid())
+  eventId     String
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  title       String
+  type        String   // presentation, recording, notes, link, photo, other
+  url         String?
+  description String?
+  isPublic    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  @@map("event_resources")
+}
+
+model EventCertificate {
+  id               String          @id @default(cuid())
+  eventId          String          @unique
+  event            Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  
+  issuedBy         String?
+  certificateType  CertificateType @default(participation)
+  skillsCovered    String[]
+  eligibility      String?         @db.Text
+  isPaid           Boolean         @default(false)
+  amount           Float?
+  deliveryMethod   String?
+  officialUrl      String?
+  additionalInfo   String?         @db.Text
+  
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  @@map("event_certificates")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// REGISTRATION & ATTENDANCE
+// ─────────────────────────────────────────────────────────────────────────────
+
+model EventRegistration {
+  id         String             @id @default(cuid())
+  userId     String
+  eventId    String
+  user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event      Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  status     RegistrationStatus @default(REGISTERED)
+  registeredAt DateTime         @default(now())
+  cancelledAt  DateTime?
+  notes        String?
+
+  @@unique([userId, eventId])
+  @@index([eventId])
+  @@index([userId])
+  @@map("event_registrations")
+}
+
+model SavedEvent {
+  userId    String
+  eventId   String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  savedAt   DateTime @default(now())
+
+  @@id([userId, eventId])
+  @@map("saved_events")
+}
+
+model EventAttendance {
+  id        String           @id @default(cuid())
+  userId    String
+  eventId   String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event     Event            @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  status    AttendanceStatus @default(REGISTERED)
+  markedAt  DateTime         @default(now())
+
+  @@unique([userId, eventId])
+  @@map("event_attendance")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CONNECTIONS (NETWORKING)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Connection {
+  id          String           @id @default(cuid())
+  requesterId String
+  targetId    String
+  requester   User             @relation("ConnectionRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  target      User             @relation("ConnectionTarget", fields: [targetId], references: [id], onDelete: Cascade)
+  status      ConnectionStatus @default(PENDING)
+  message     String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@unique([requesterId, targetId])
+  @@index([requesterId])
+  @@index([targetId])
+  @@map("connections")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// COMMUNITIES
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Community {
+  id          String          @id @default(cuid())
+  eventId     String          @unique
+  event       Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  name        String
+  description String?         @db.Text
+  isActive    Boolean         @default(true)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  posts       CommunityPost[]
+
+  @@map("communities")
+}
+
+model CommunityPost {
+  id          String             @id @default(cuid())
+  communityId String
+  authorId    String
+  community   Community          @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  author      User               @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  content     String             @db.Text
+  isEdited    Boolean            @default(false)
+  isPinned    Boolean            @default(false)
+  isDeleted   Boolean            @default(false)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  comments    CommunityComment[]
+
+  @@index([communityId])
+  @@map("community_posts")
+}
+
+model CommunityComment {
+  id        String        @id @default(cuid())
+  postId    String
+  authorId  String
+  post      CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author    User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  content   String        @db.Text
+  isEdited  Boolean       @default(false)
+  isDeleted Boolean       @default(false)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([postId])
+  @@map("community_comments")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// NOTIFICATIONS
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Notification {
+  id              String           @id @default(cuid())
+  userId          String
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type            NotificationType
+  title           String
+  message         String           @db.Text
+  relatedEntityId String?
+  relatedEntityType String?
+  actionUrl       String?
+  isRead          Boolean          @default(false)
+  createdAt       DateTime         @default(now())
+
+  @@index([userId])
+  @@index([isRead])
+  @@map("notifications")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// REVIEWS
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Review {
+  id        String   @id @default(cuid())
+  eventId   String
+  userId    String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rating    Int      // 1-5
+  title     String?
+  content   String?  @db.Text
+  isEdited  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([eventId, userId])
+  @@index([eventId])
+  @@map("reviews")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ORGANIZER
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Organizer {
+  id                 String             @id @default(cuid())
+  userId             String             @unique
+  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationName   String
+  description        String?            @db.Text
+  logo               String?
+  website            String?
+  email              String?
+  phone              String?
+  city               String?
+  verificationStatus VerificationStatus @default(PENDING)
+  verificationNotes  String?            @db.Text
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  events             Event[]
+  verification       OrganizerVerification[]
+
+  @@map("organizers")
+}
+
+model OrganizerVerification {
+  id           String             @id @default(cuid())
+  organizerId  String
+  organizer    Organizer          @relation(fields: [organizerId], references: [id], onDelete: Cascade)
+  status       VerificationStatus @default(PENDING)
+  documents    String[]
+  notes        String?            @db.Text
+  reviewedBy   String?
+  reviewedAt   DateTime?
+  submittedAt  DateTime           @default(now())
+
+  @@map("organizer_verifications")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// REPORTS
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Report {
+  id           String           @id @default(cuid())
+  reporterId   String
+  reporter     User             @relation("Reporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  reportedUser User?            @relation("ReportedUser", fields: [reportedUserId], references: [id])
+  reportedUserId String?
+  targetType   ReportTargetType
+  targetId     String
+  reason       String
+  description  String?          @db.Text
+  status       ReportStatus     @default(OPEN)
+  resolvedAt   DateTime?
+  resolvedBy   String?
+  resolution   String?
+  createdAt    DateTime         @default(now())
+
+  @@index([status])
+  @@map("reports")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EVENT CHANGE HISTORY
+// ─────────────────────────────────────────────────────────────────────────────
+
+model EventChangeHistory {
+  id          String   @id @default(cuid())
+  eventId     String
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  changedById String
+  changedBy   User     @relation(fields: [changedById], references: [id])
+  changeType  String   // date_change, location_change, cancellation, description_change, etc.
+  fieldName   String?
+  oldValue    String?  @db.Text
+  newValue    String?  @db.Text
+  createdAt   DateTime @default(now())
+
+  @@index([eventId])
+  @@map("event_change_history")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EXTERNAL EVENT SOURCES
+// ─────────────────────────────────────────────────────────────────────────────
+
+model EventSource {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  baseUrl     String?
+  isActive    Boolean  @default(true)
+  config      Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  events      Event[]
+  syncLogs    EventSyncLog[]
+
+  @@map("event_sources")
+}
+
+model EventSyncLog {
+  id          String     @id @default(cuid())
+  sourceId    String
+  eventId     String?
+  source      EventSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  event       Event?     @relation(fields: [eventId], references: [id])
+  status      SyncStatus @default(PENDING)
+  message     String?
+  rawData     Json?
+  syncedAt    DateTime   @default(now())
+
+  @@index([sourceId])
+  @@map("event_sync_logs")
+}

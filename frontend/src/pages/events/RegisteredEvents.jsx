@@ -1,11 +1,22 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { CheckCircle, Calendar, MapPin, Users, Search, Clock, Award } from 'lucide-react'
+import { CheckCircle, Calendar, MapPin, Users, Search, Award } from 'lucide-react'
 import { eventsAPI } from '../../services/eventsService'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
 import Button from '../../components/common/Button'
-import CertificateInfo from '../../components/events/CertificateInfo'
+
+const formatDateTime = (dateString) => {
+  if (!dateString) return ''
+  const d = new Date(dateString)
+  return d.toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }) +
+    ' • ' + d.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true })
+}
+
+const formatPrice = (price) => {
+  if (!price || price === 0) return 'Free'
+  return `₹${price.toLocaleString('en-IN')}`
+}
 
 function RegisteredEvents() {
   const { data: registeredEventsData, isLoading, error } = useQuery({
@@ -13,11 +24,15 @@ function RegisteredEvents() {
     queryFn: eventsAPI.getRegisteredEvents,
   })
 
-  const allEvents = registeredEventsData?.events || []
-  
-  // Separate upcoming and past events
-  const upcomingEvents = allEvents.filter(event => new Date(event.start_date) > new Date())
-  const pastEvents = allEvents.filter(event => new Date(event.start_date) <= new Date())
+  const allEvents = registeredEventsData?.data || []
+
+  const upcomingEvents = allEvents.filter(event =>
+    event.derivedStatus === 'UPCOMING' || event.derivedStatus === 'ONGOING'
+  )
+  const pastEvents = allEvents.filter(event =>
+    event.derivedStatus === 'COMPLETED' || event.derivedStatus === 'CANCELLED'
+  )
+  const cancelledRegistrations = allEvents.filter(event => event.registrationStatus === 'CANCELLED')
 
   if (isLoading) {
     return (
@@ -33,9 +48,7 @@ function RegisteredEvents() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-secondary-900 mb-2">My Events</h1>
-          <p className="text-secondary-600">
-            Events you've registered for
-          </p>
+          <p className="text-secondary-600">Events you've registered for</p>
         </div>
 
         {error ? (
@@ -49,7 +62,7 @@ function RegisteredEvents() {
             </div>
             <h3 className="text-xl font-semibold text-secondary-900 mb-3">No registered events yet</h3>
             <p className="text-secondary-600 mb-6 max-w-md mx-auto">
-              Start discovering amazing events and register for ones that interest you. They'll appear here once you've registered.
+              Start discovering amazing events and register for ones that interest you.
             </p>
             <Link to="/events">
               <Button>
@@ -59,16 +72,17 @@ function RegisteredEvents() {
             </Link>
           </div>
         ) : (
-          <div className="space-y-8">
+          <div className="space-y-10">
             {/* Upcoming Events */}
             {upcomingEvents.length > 0 && (
               <section>
-                <h2 className="text-xl font-semibold text-secondary-900 mb-6">
-                  Upcoming Events ({upcomingEvents.length})
+                <h2 className="text-xl font-semibold text-secondary-900 mb-4 flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500" />
+                  Upcoming ({upcomingEvents.length})
                 </h2>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {upcomingEvents.map((event) => (
-                    <RegisteredEventCard key={event.id} event={event} isUpcoming={true} />
+                  {upcomingEvents.map(event => (
+                    <EventRegistrationCard key={event.id} event={event} />
                   ))}
                 </div>
               </section>
@@ -77,12 +91,12 @@ function RegisteredEvents() {
             {/* Past Events */}
             {pastEvents.length > 0 && (
               <section>
-                <h2 className="text-xl font-semibold text-secondary-900 mb-6">
+                <h2 className="text-xl font-semibold text-secondary-900 mb-4">
                   Past Events ({pastEvents.length})
                 </h2>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {pastEvents.map((event) => (
-                    <RegisteredEventCard key={event.id} event={event} isUpcoming={false} />
+                  {pastEvents.map(event => (
+                    <EventRegistrationCard key={event.id} event={event} isPast />
                   ))}
                 </div>
               </section>
@@ -94,163 +108,70 @@ function RegisteredEvents() {
   )
 }
 
-function RegisteredEventCard({ event, isUpcoming }) {
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    })
-  }
-
-  const formatTime = (timeString) => {
-    return new Date(`2000-01-01T${timeString}`).toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-    })
-  }
-
-  const getTimeUntilEvent = () => {
-    const eventDate = new Date(event.start_date)
-    const now = new Date()
-    const diffTime = eventDate - now
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-    
-    if (diffDays === 0) return 'Today'
-    if (diffDays === 1) return 'Tomorrow'
-    if (diffDays < 7) return `In ${diffDays} days`
-    if (diffDays < 30) return `In ${Math.ceil(diffDays / 7)} weeks`
-    return `In ${Math.ceil(diffDays / 30)} months`
-  }
-
+function EventRegistrationCard({ event, isPast }) {
   return (
-    <Link to={`/events/${event.id}`} className="block">
-      <div className={`card p-6 h-full hover:shadow-lg transition-all relative ${
-        !isUpcoming ? 'opacity-80' : ''
-      }`}>
-        {/* Event Status */}
-        <div className="flex justify-between items-start mb-4">
-          <div className="flex items-center gap-2">
-            <span className="px-2 py-1 bg-primary-100 text-primary-700 text-xs font-medium rounded-full">
-              {event.category}
-            </span>
-            <span className="px-2 py-1 bg-secondary-100 text-secondary-700 text-xs font-medium rounded-full">
-              {event.is_online ? (event.location ? 'Hybrid' : 'Online') : 'In-Person'}
-            </span>
-            {event.level && (
-              <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
-                {event.level}
+    <Link to={`/events/${event.id}`}>
+      <div className={`card p-6 hover:shadow-lg transition-all ${isPast ? 'opacity-75' : ''}`}>
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="px-2 py-1 bg-primary-100 text-primary-700 text-xs font-medium rounded-full capitalize">
+                {event.category}
               </span>
-            )}
-          </div>
-          
-          <div className="flex items-center gap-2">
-            {isUpcoming ? (
-              <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
-                {getTimeUntilEvent()}
-              </span>
-            ) : (
-              <span className="px-2 py-1 bg-secondary-100 text-secondary-600 text-xs font-medium rounded-full">
-                Completed
-              </span>
-            )}
-            <CheckCircle className="w-5 h-5 text-green-600" />
-          </div>
-        </div>
-
-        {/* Event Title & Description */}
-        <div className="mb-4">
-          <h3 className="text-xl font-semibold text-secondary-900 mb-2 line-clamp-2">
-            {event.title}
-          </h3>
-          <p className="text-secondary-600 text-sm mb-3 line-clamp-2">
-            {event.description}
-          </p>
-        </div>
-
-        {/* Event Details */}
-        <div className="space-y-3 mb-4">
-          <div className="flex items-center text-secondary-600 text-sm">
-            <Calendar className="w-4 h-4 mr-2 flex-shrink-0" />
-            <span>
-              {formatDate(event.start_date)}
-              {event.start_time && ` • ${formatTime(event.start_time)}`}
-            </span>
-          </div>
-
-          {event.location && (
-            <div className="flex items-center text-secondary-600 text-sm">
-              <MapPin className="w-4 h-4 mr-2 flex-shrink-0" />
-              <span className="truncate">{event.location}</span>
-            </div>
-          )}
-
-          <div className="flex items-center text-secondary-600 text-sm">
-            <Users className="w-4 h-4 mr-2 flex-shrink-0" />
-            <span>
-              {event.registered_count || 0} registered
-              {event.capacity && ` • ${event.capacity} total capacity`}
-            </span>
-          </div>
-
-          {/* Registration deadline warning for upcoming events */}
-          {isUpcoming && event.registration_deadline && (
-            <div className="flex items-center text-orange-600 text-sm">
-              <Clock className="w-4 h-4 mr-2 flex-shrink-0" />
-              <span>Registration closes {formatDate(event.registration_deadline)}</span>
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="flex justify-between items-center pt-4 border-t border-secondary-100">
-          <div className="text-sm text-secondary-600">
-            by <span className="font-medium">{event.organizer_name || 'Organizer'}</span>
-          </div>
-          <div className="text-lg font-semibold text-secondary-900">
-            {event.price === 0 || event.price === null ? 'Free' : `$${event.price}`}
-          </div>
-        </div>
-
-        {/* Additional Info for Past Events */}
-        {!isUpcoming && (
-          <div className="mt-4 pt-4 border-t border-secondary-100 space-y-4">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-secondary-600">Event completed</span>
-              {event.can_review && (
-                <Button variant="outline" size="sm" onClick={(e) => {
-                  e.preventDefault()
-                  // Handle review action
-                }}>
-                  Write Review
-                </Button>
+              {event.derivedStatus === 'ONGOING' && (
+                <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                  Live Now
+                </span>
+              )}
+              {event.derivedStatus === 'COMPLETED' && (
+                <span className="px-2 py-1 bg-secondary-100 text-secondary-600 text-xs font-medium rounded-full">
+                  Completed
+                </span>
+              )}
+              {event.derivedStatus === 'CANCELLED' && (
+                <span className="px-2 py-1 bg-red-100 text-red-600 text-xs font-medium rounded-full">
+                  Cancelled
+                </span>
               )}
             </div>
-
-            {/* Certificate Information for Past Events */}
-            {event.certificate?.available && (
-              <div className="mt-3">
-                <CertificateInfo certificate={event.certificate} compact={true} />
-              </div>
-            )}
+            <h3 className="text-lg font-semibold text-secondary-900 mb-1 line-clamp-2">{event.title}</h3>
+            <p className="text-sm text-secondary-500">by {event.organizerName || 'Organizer'}</p>
           </div>
-        )}
+        </div>
 
-        {/* Reminder for Upcoming Events */}
-        {isUpcoming && new Date(event.start_date) - new Date() < 7 * 24 * 60 * 60 * 1000 && (
-          <div className="mt-4 pt-4 border-t border-secondary-100">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <div className="flex items-center text-blue-700 text-sm">
-                <Clock className="w-4 h-4 mr-2 flex-shrink-0" />
-                <span className="font-medium">Coming up soon!</span>
-              </div>
-              <p className="text-blue-600 text-xs mt-1">
-                Don't forget to add this to your calendar
-              </p>
+        <div className="space-y-2 mt-3">
+          <div className="flex items-center text-secondary-600 text-sm">
+            <Calendar className="w-4 h-4 mr-2 flex-shrink-0" />
+            <span>{formatDateTime(event.startDateTime)}</span>
+          </div>
+          {(event.location || event.city) && (
+            <div className="flex items-center text-secondary-600 text-sm">
+              <MapPin className="w-4 h-4 mr-2 flex-shrink-0" />
+              <span>{event.isOnline ? 'Online' : (event.location || event.city)}</span>
             </div>
+          )}
+          {event.registeredCount !== undefined && (
+            <div className="flex items-center text-secondary-600 text-sm">
+              <Users className="w-4 h-4 mr-2 flex-shrink-0" />
+              <span>{event.registeredCount} registered{event.capacity ? ` / ${event.capacity}` : ''}</span>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center justify-between mt-4 pt-3 border-t border-secondary-100">
+          <div className="flex items-center gap-3">
+            {event.certificateAvailable && (
+              <span className="flex items-center text-primary-600 text-xs">
+                <Award className="w-3 h-3 mr-1" />
+                Certificate
+              </span>
+            )}
+            <span className="text-sm font-medium text-green-600">
+              {event.registrationStatus === 'REGISTERED' ? '✓ Registered' : event.registrationStatus}
+            </span>
           </div>
-        )}
+          <span className="text-secondary-700 font-semibold">{formatPrice(event.price)}</span>
+        </div>
       </div>
     </Link>
   )

@@ -1,17 +1,20 @@
 // Event categories
 export const EVENT_CATEGORIES = [
-  { value: 'workshop', label: 'Workshop' },
-  { value: 'conference', label: 'Conference' },
-  { value: 'seminar', label: 'Seminar' },
-  { value: 'meetup', label: 'Meetup' },
-  { value: 'hackathon', label: 'Hackathon' },
-  { value: 'webinar', label: 'Webinar' },
-  { value: 'networking', label: 'Networking' },
-  { value: 'career', label: 'Career Event' },
-  { value: 'startup', label: 'Startup Event' },
-  { value: 'research', label: 'Research Event' },
-  { value: 'community', label: 'Community Event' },
-  { value: 'lecture', label: 'Guest Lecture' },
+  { value: 'workshop', label: 'Workshop', emoji: '🛠️' },
+  { value: 'conference', label: 'Conference', emoji: '🎤' },
+  { value: 'seminar', label: 'Seminar', emoji: '📖' },
+  { value: 'meetup', label: 'Meetup', emoji: '🤝' },
+  { value: 'hackathon', label: 'Hackathon', emoji: '💻' },
+  { value: 'webinar', label: 'Webinar', emoji: '🖥️' },
+  { value: 'networking', label: 'Networking Event', emoji: '🌐' },
+  { value: 'career', label: 'Career Event', emoji: '💼' },
+  { value: 'startup', label: 'Startup Event', emoji: '🚀' },
+  { value: 'research', label: 'Research Event', emoji: '🔬' },
+  { value: 'community', label: 'Community Event', emoji: '👥' },
+  { value: 'lecture', label: 'Guest Lecture', emoji: '🎓' },
+  { value: 'tech', label: 'Tech Event', emoji: '⚡' },
+  { value: 'company', label: 'Company Event', emoji: '🏢' },
+  { value: 'college', label: 'College Event', emoji: '🎒' },
 ]
 
 // Event levels
@@ -59,19 +62,64 @@ export const EXPERIENCE_LEVELS = [
   { value: 'executive', label: 'Executive (10+ years)' },
 ]
 
-// Networking goals
+// Networking goals (enhanced from existing)
 export const NETWORKING_GOALS = [
-  { value: 'learn', label: 'Learn from others' },
-  { value: 'mentor', label: 'Find mentors' },
-  { value: 'collaborate', label: 'Find collaborators' },
-  { value: 'career', label: 'Explore careers' },
-  { value: 'jobs', label: 'Find job opportunities' },
-  { value: 'startup', label: 'Find startup opportunities' },
-  { value: 'professionals', label: 'Meet professionals' },
-  { value: 'students', label: 'Meet students' },
-  { value: 'network', label: 'Build professional network' },
-  { value: 'hiring', label: 'Find talent to hire' },
+  { value: 'meet_people', label: '🤝 Meet new people', icon: '🤝' },
+  { value: 'learn', label: '📚 Learn from others', icon: '📚' },
+  { value: 'find_mentor', label: '🧑‍🏫 Find a mentor', icon: '🧑‍🏫' },
+  { value: 'career_opportunities', label: '💼 Explore career opportunities', icon: '💼' },
+  { value: 'startup_collaborators', label: '🚀 Find startup collaborators', icon: '🚀' },
+  { value: 'research_collaborators', label: '🔬 Find research collaborators', icon: '🔬' },
+  { value: 'meet_professionals', label: '👥 Meet professionals', icon: '👥' },
+  { value: 'meet_students', label: '🎓 Meet students', icon: '🎓' },
+  { value: 'project_teammates', label: '💻 Find project teammates', icon: '💻' },
+  { value: 'build_network', label: '🌐 Build professional network', icon: '🌐' },
 ]
+
+// Looking for options
+export const LOOKING_FOR_OPTIONS = [
+  { value: 'mentors', label: 'Mentors', description: 'Experienced professionals to guide my career' },
+  { value: 'collaborators', label: 'Collaborators', description: 'Partners for projects and ideas' },
+  { value: 'teammates', label: 'Project teammates', description: 'People to work with on specific projects' },
+  { value: 'internships', label: 'Internship opportunities', description: 'Companies offering internship positions' },
+  { value: 'career_connections', label: 'Career connections', description: 'Professional contacts in my field' },
+  { value: 'startup_connections', label: 'Startup connections', description: 'Entrepreneurs and startup ecosystem contacts' },
+  { value: 'researchers', label: 'Researchers', description: 'Academic and industry researchers' },
+  { value: 'professionals', label: 'Industry professionals', description: 'Working professionals in my domain' },
+  { value: 'students', label: 'Students with similar interests', description: 'Fellow students and learners' },
+  { value: 'investors', label: 'Investors', description: 'People interested in funding projects' },
+]
+
+// Connection request statuses
+export const CONNECTION_STATUS = {
+  NONE: 'none',
+  PENDING_SENT: 'pending_sent',
+  PENDING_RECEIVED: 'pending_received',
+  CONNECTED: 'connected',
+  REJECTED: 'rejected',
+}
+
+// Privacy settings options
+export const PRIVACY_OPTIONS = {
+  PUBLIC: 'public',
+  CONNECTIONS: 'connections',
+  PRIVATE: 'private',
+}
+
+// Attendance visibility options
+export const ATTENDANCE_VISIBILITY = {
+  VISIBLE: 'visible',
+  CONNECTIONS_ONLY: 'connections_only',
+  HIDDEN: 'hidden',
+}
+
+// Connection request preferences
+export const CONNECTION_PREFERENCES = {
+  ANYONE: 'anyone',
+  SAME_INTERESTS: 'same_interests',
+  SAME_EVENTS: 'same_events',
+  CONNECTIONS_OF_CONNECTIONS: 'connections_of_connections',
+}
 
 // Popular skills (for autocomplete/suggestions)
 export const POPULAR_SKILLS = [

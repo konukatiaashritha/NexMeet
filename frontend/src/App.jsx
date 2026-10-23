@@ -12,6 +12,10 @@ import Dashboard from './pages/dashboard/Dashboard'
 import SavedEvents from './pages/events/SavedEvents'
 import RegisteredEvents from './pages/events/RegisteredEvents'
 import Communities from './pages/community/Communities'
+import EventCommunity from './pages/community/EventCommunity'
+import Networking from './pages/networking/Networking'
+import People from './pages/networking/People'
+import Notifications from './pages/Notifications'
 import CertificateTest from './pages/CertificateTest'
 import NotFound from './pages/NotFound'
 import ProtectedRoute from './components/common/ProtectedRoute'
@@ -28,6 +32,7 @@ function App() {
           <Route path="/events" element={<Events />} />
           <Route path="/events/:id" element={<EventDetails />} />
           <Route path="/communities" element={<Communities />} />
+          <Route path="/events/:eventId/community" element={<EventCommunity />} />
           <Route path="/certificate-test" element={<CertificateTest />} />
           
           {/* Protected Routes */}
@@ -49,6 +54,21 @@ function App() {
           <Route path="/registered-events" element={
             <ProtectedRoute>
               <RegisteredEvents />
+            </ProtectedRoute>
+          } />
+          <Route path="/networking" element={
+            <ProtectedRoute>
+              <Networking />
+            </ProtectedRoute>
+          } />
+          <Route path="/people" element={
+            <ProtectedRoute>
+              <People />
+            </ProtectedRoute>
+          } />
+          <Route path="/notifications" element={
+            <ProtectedRoute>
+              <Notifications />
             </ProtectedRoute>
           } />
           
